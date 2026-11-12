@@ -62,7 +62,15 @@ try {
     } else {
         $error = $exception->getMessage();
     }
-    $items = $items ?? [];
+    // Tetap baca isi database walaupun proses POST gagal.
+    // Browser mungkin mengirim ulang formulir yang sebenarnya sudah tersimpan.
+    try {
+        $pdo = $pdo ?? database();
+        $items = $pdo->query('SELECT id, sku, name, stock FROM items ORDER BY name COLLATE NOCASE')->fetchAll();
+    } catch (Throwable $readException) {
+        $items = [];
+        $error .= ' (Data gagal dibaca: ' . $readException->getMessage() . ')';
+    }
     $totalItems = count($items);
     $totalStock = array_sum(array_column($items, 'stock'));
 }
