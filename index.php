@@ -63,8 +63,6 @@ try {
     } else {
         $error = $exception->getMessage();
     }
-    // Tetap baca isi database walaupun proses POST gagal.
-    // Browser mungkin mengirim ulang formulir yang sebenarnya sudah tersimpan.
     try {
         $pdo = $pdo ?? database();
         $items = $pdo->query('SELECT id, sku, name, stock FROM items ORDER BY name COLLATE NOCASE')->fetchAll();
@@ -76,7 +74,6 @@ try {
     $totalStock = array_sum(array_column($items, 'stock'));
 }
 
-// Post/Redirect/Get: cegah browser mengirim ulang POST saat halaman di-refresh.
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $_SESSION['flash_error'] = $error;
     $_SESSION['flash_success'] = $success;
@@ -161,49 +158,5 @@ function e(string|int $value): string
     </section>
     <footer>Mini Inventory · Data disimpan di <code>database/inventory.sqlite</code></footer>
 </main>
-
-<script>
-/* Kirim transaksi tanpa memuat ulang seluruh halaman. */
-document.addEventListener('submit', async function (event) {
-    const form = event.target;
-    if (!(form instanceof HTMLFormElement) || form.method.toLowerCase() !== 'post') return;
-
-    event.preventDefault();
-
-    const button = event.submitter;
-    const originalLabel = button ? button.textContent : '';
-    if (button) {
-        button.disabled = true;
-        button.textContent = 'Menyimpan...';
-    }
-
-    try {
-        const response = await fetch(form.action || window.location.href, {
-            method: 'POST',
-            body: button ? new FormData(form, button) : new FormData(form),
-            headers: { 'X-Requested-With': 'fetch' },
-            redirect: 'follow'
-        });
-
-        if (!response.ok) throw new Error('Server merespons dengan status ' + response.status);
-
-        const html = await response.text();
-        const parsed = new DOMParser().parseFromString(html, 'text/html');
-        const freshMain = parsed.querySelector('main');
-        const currentMain = document.querySelector('main');
-
-        if (!freshMain || !currentMain) throw new Error('Tampilan baru tidak dapat dibaca.');
-
-        currentMain.innerHTML = freshMain.innerHTML;
-    } catch (error) {
-        if (button) {
-            button.disabled = false;
-            button.textContent = originalLabel;
-        }
-        alert('Belum berhasil menyimpan. Periksa koneksi server lalu coba lagi. ' + error.message);
-    }
-});
-</script>
-
 </body>
 </html>
