@@ -8,8 +8,9 @@ if (empty($_SESSION['csrf'])) {
     $_SESSION['csrf'] = bin2hex(random_bytes(32));
 }
 
-$error = '';
-$success = '';
+$error = (string)($_SESSION['flash_error'] ?? '');
+$success = (string)($_SESSION['flash_success'] ?? '');
+unset($_SESSION['flash_error'], $_SESSION['flash_success']);
 
 try {
     $pdo = database();
@@ -73,6 +74,14 @@ try {
     }
     $totalItems = count($items);
     $totalStock = array_sum(array_column($items, 'stock'));
+}
+
+// Post/Redirect/Get: cegah browser mengirim ulang POST saat halaman di-refresh.
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $_SESSION['flash_error'] = $error;
+    $_SESSION['flash_success'] = $success;
+    header('Location: /', true, 303);
+    exit;
 }
 
 function e(string|int $value): string
